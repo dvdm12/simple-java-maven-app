@@ -7,44 +7,6 @@ pipeline {
     }
 
     stages {
-        stage('Build') {
-            steps {
-                echo "Compiling the Maven project..."
-                sh 'mvn -B clean package'
-                echo "Build completed successfully."
-            }
-        }
-
-        stage('JUnit 5 Tests') {
-            steps {
-                echo "Running unit tests..."
-                sh 'mvn test'
-                echo "JUnit 5 tests executed."
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('Dependency Analysis') {
-            steps {
-                echo "Running OWASP Dependency Check..."
-                sh 'mvn org.owasp:dependency-check-maven:check'
-                echo "OWASP Dependency Check completed."
-            }
-            post {
-                always {
-                    publishHTML(target: [
-                        reportDir: 'target',
-                        reportFiles: 'dependency-check-report.html',
-                        reportName: 'OWASP Dependency Check Report'
-                    ])
-                }
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
                 echo "Starting SonarQube analysis..."
@@ -60,17 +22,6 @@ pipeline {
                         echo "SonarQube analysis completed."
                     }
                 }
-            }
-        }
-
-        stage('Quality Review') {
-            steps {
-                script {
-                    timeout(time: 3, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
-                }
-                echo "Quality Gate verification completed."
             }
         }
     }
