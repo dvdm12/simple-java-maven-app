@@ -1,0 +1,87 @@
+pipeline {
+    agent {
+        docker {
+            image 'maven:3.9.11-eclipse-temurin-17'
+            args '-v /root/.m2:/root/.m2'
+        }
+    }
+
+    environment {
+        SONAR_PROJECT_KEY = 'taller-SO'
+        SONAR_PROJECT_NAME = 'taller-SO'
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B clean package'
+                echo "Build completed successfully."
+            }
+        }
+
+        stage('JUnit 5 Tests') {
+            steps {
+                sh 'mvn test'
+                echo "JUnit 5 tests executed."
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Dependency Analysis') {
+            steps {
+                sh 'mvn org.owasp:dependency-check-maven:check'
+                echo "OWASP Dependency Check completed."
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        reportDir: 'target',
+                        reportFiles: 'dependency-check-report.html',
+                        reportName: 'OWASP Dependency Check Report'
+                    ])
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                    withSonarQubeEnv('SonarQubeServer') {
+                        sh '''
+                            mvn -B verify sonar:sonar \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                                -Dsonar.host.url=${SONAR_HOST_URL} \
+                                -Dsonar.token=${SONAR_AUTH_TOKEN}
+                        '''
+                        echo "SonarQube analysis completed."
+                    }
+                }
+            }
+        }
+
+        stage('Quality Review') {
+            steps {
+                script {
+                    timeout(time: 3, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+                echo "Quality Gate verification completed."
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline finished."
+        }
+        failure {
+            echo "Pipeline failed. Please review the logs."
+        }
+    }
+}
