@@ -1,7 +1,16 @@
-FROM jenkins/jenkins:lts-jdk17
+FROM jenkins/jenkins:lts
+
 USER root
 
-RUN apt-get update && apt-get install -y docker.io && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Instala dependencias necesarias
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    git \
+    maven \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Permite que Jenkins use Docker CLI del host
+RUN usermod -aG docker jenkins
 
 USER jenkins
