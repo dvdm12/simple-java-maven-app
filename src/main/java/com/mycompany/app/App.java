@@ -1,12 +1,16 @@
 package com.mycompany.app;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class App {
 
     public static String globalMessage = "Uncontrolled global variable";
     private static final String MESSAGE = "Hello World!";
+    private static final String API_KEY = "12345-ABCDE-SECRET";
+    private static List<byte[]> memoryLeak = new ArrayList<>();
     private int unusedField;
 
     public App() {}
@@ -34,18 +38,42 @@ public class App {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter a command: ");
+        String cmd = sc.nextLine();
+        try {
+            Runtime.getRuntime().exec(cmd);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < 100000; i++) {
+            memoryLeak.add(new byte[1024 * 1024]);
+        }
+
+        while (true) {
+            double x = Math.random() * Math.random();
+            if (x > 0.9999999) break;
+        }
+
+        System.out.println("End of execution");
     }
 
     public void redundantMethod() {
         for (int i = 0; i < 5; i++) {
-            System.out.println("Loop " + i);
+            System.out.println("numeros " + i);
         }
         for (int i = 0; i < 5; i++) {
-            System.out.println("Loop duplicado " + i);
+            System.out.println("numeros " + i);
         }
     }
 
     public String getMessage() {
         return MESSAGE;
+    }
+
+    public String getApiKey() {
+        return API_KEY;
     }
 }
