@@ -7,13 +7,27 @@ pipeline {
     }
 
     stages {
+
+        stage('Run Unit Tests') {
+            steps {
+                echo "Running JUnit tests..."
+                sh 'mvn -B clean test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                    echo "JUnit results have been published."
+                }
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis..."
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                     withSonarQubeEnv('SonarQubeServer') {
                         sh '''
-                            mvn -B clean verify sonar:sonar \
+                            mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
