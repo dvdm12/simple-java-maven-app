@@ -13,7 +13,7 @@ pipeline {
                 echo "Running JUnit tests..."
                 sh 'mvn -B clean test'
             }
-            post {
+            post {  
                 always {
                     junit 'target/surefire-reports/*.xml'
                     echo "JUnit results have been published."
@@ -24,9 +24,19 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis..."
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                    withSonarQubeEnv('SonarQubeServer') {
+
+                // Limpia variable obsoleta que causa warnings en Jenkins
+                sh 'unset SONARQUBE_SCANNER_PARAMS'
+
+                // Carga variables de entorno del servidor SonarQube
+                withSonarQubeEnv('SonarQubeServer') {
+                    // Inyecta el token secreto almacenado en Jenkins
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         sh '''
+                            echo "Testing SonarQube connection..."
+                            curl -u "${SONAR_AUTH_TOKEN}:" ${SONAR_HOST_URL}/api/authentication/validate
+
+                            echo "Starting Maven SonarQube analysis..."
                             mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
@@ -35,9 +45,19 @@ pipeline {
                         '''
                     }
                 }
+
                 echo "SonarQube analysis completed successfully."
             }
         }
+
+        stage('Quality Gate') {
+            steps {
+            timeout(time: 2, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: true
+            }
+        }
+}
+
     }
 
     post {
