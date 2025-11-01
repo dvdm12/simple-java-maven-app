@@ -25,12 +25,9 @@ pipeline {
             steps {
                 echo "Running SonarQube analysis..."
 
-                // Limpia variable obsoleta que causa warnings en Jenkins
                 sh 'unset SONARQUBE_SCANNER_PARAMS'
 
-                // Carga variables de entorno del servidor SonarQube
                 withSonarQubeEnv('SonarQubeServer') {
-                    // Inyecta el token secreto almacenado en Jenkins
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         sh '''
                             echo "Testing SonarQube connection..."
@@ -52,18 +49,15 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-            script {
-                echo "Waiting for SonarQube Quality Gate result"
-                timeout(time: 5, unit: 'MINUTES') {
-                    def qg = waitForQualityGate abortPipeline: true
-                    echo "Quality Gate status: ${qg.status}"
+                script {
+                    echo "Waiting for SonarQube Quality Gate result..."
+                    timeout(time: 5, unit: 'MINUTES') {
+                        def qg = waitForQualityGate abortPipeline: true
+                        echo "Quality Gate status: ${qg.status}"
+                    }
                 }
             }
         }
-}
-
-}
-
     }
 
     post {
